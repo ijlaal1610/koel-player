@@ -1,12 +1,15 @@
-name: Unit Tests
+name: Unit Tests and APK Build
+
 on:
   push:
     branches:
-      - master
+      - master  # Trigger on push to master
   pull_request:
   workflow_dispatch:
+
 jobs:
-  run:
+  # Job for running unit tests
+  run-tests:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,3 +18,22 @@ jobs:
           channel: stable
       - run: flutter pub get
       - run: flutter test
+
+  # Job for building APK after tests pass
+  build-apk:
+    runs-on: ubuntu-latest  # Use Ubuntu to build the APK
+    needs: run-tests  # Only run after unit tests pass
+
+    steps:
+      - uses: actions/checkout@v4  # Checkout the code
+      - uses: subosito/flutter-action@v2  # Set up Flutter environment
+        with:
+          channel: stable
+      - run: flutter pub get  # Install dependencies
+      - run: flutter build apk --release  # Build the APK in release mode
+
+      # Upload APK as an artifact
+      - uses: actions/upload-artifact@v2
+        with:
+          name: koel-player-apk
+          path: build/app/outputs/flutter-apk/app-release.apk  # Path to the APK after build
