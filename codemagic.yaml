@@ -1,6 +1,6 @@
 workflows:
-  ios-build:
-    name: iOS Build (Unsigned)
+  build-all:
+    name: Build APK + IPA (Final)
     max_build_duration: 60
 
     environment:
@@ -18,20 +18,37 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Build iOS
+      # ---------------- ANDROID ----------------
+      - name: Build APK (Release)
+        script: |
+          flutter build apk --release
+
+      # ---------------- IOS ----------------
+      - name: Build iOS (No Code Sign)
         script: |
           flutter build ios --release --no-codesign
 
-      - name: Create Proper IPA
+      - name: Create Proper IPA (Fixed Structure)
         script: |
           mkdir -p build/ios/ipa
           cd build/ios/iphoneos
+
+          # Clean previous if exists
+          rm -rf Payload
+          rm -f Runner.ipa
+
+          # Create correct structure
           mkdir Payload
           mv Runner.app Payload/
+
+          # Zip into IPA
           cd Payload
           zip -r ../Runner.ipa .
           cd ..
+
+          # Move IPA to output folder
           mv Runner.ipa ../ipa/
 
     artifacts:
+      - build/app/outputs/flutter-apk/*.apk
       - build/ios/ipa/*.ipa
