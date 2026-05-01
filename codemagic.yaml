@@ -20,9 +20,9 @@ workflows:
           rm -rf ios/Podfile.lock
           flutter pub get
 
-      - name: Force iOS Deployment Target (Bulletproof)
+      - name: Force iOS Deployment Target (Working)
         script: |
-          sed -i 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' ios/Runner.xcodeproj/project.pbxproj
+          perl -pi -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' ios/Runner.xcodeproj/project.pbxproj
 
       - name: Build iOS (No Code Sign)
         script: |
