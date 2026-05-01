@@ -27,18 +27,18 @@ workflows:
           mkdir -p build/ios/ipa
           cd build/ios/iphoneos
 
-          # Clean old files if exist
+          # Clean old files
           rm -rf Payload
           rm -f Runner.ipa
 
-          # Correct IPA structure
+          # Create correct structure
           mkdir Payload
           mv Runner.app Payload/
 
-          cd Payload
-          zip -r ../Runner.ipa .
-          cd ..
+          # ZIP THE PAYLOAD FOLDER (IMPORTANT)
+          zip -r Runner.ipa Payload
 
+          # Move IPA
           mv Runner.ipa ../ipa/
 
     artifacts:
