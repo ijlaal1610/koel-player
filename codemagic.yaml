@@ -7,24 +7,31 @@ workflows:
       flutter: stable
       xcode: latest
 
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - build/
+
     scripts:
-      - name: Clean
+      - name: Setup Flutter
         script: |
           flutter clean
-
-      - name: Get packages
-        script: |
           flutter pub get
 
       - name: Build iOS
         script: |
           flutter build ios --release --no-codesign
 
-      - name: Convert to IPA
+      - name: Create Proper IPA
         script: |
           mkdir -p build/ios/ipa
           cd build/ios/iphoneos
-          zip -r ../ipa/Runner.ipa Runner.app
+          mkdir Payload
+          mv Runner.app Payload/
+          cd Payload
+          zip -r ../Runner.ipa .
+          cd ..
+          mv Runner.ipa ../ipa/
 
     artifacts:
       - build/ios/ipa/*.ipa
