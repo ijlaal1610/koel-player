@@ -5,6 +5,7 @@ import 'package:app/models/models.dart';
 import 'package:app/providers/providers.dart';
 import 'package:app/router.dart';
 import 'package:app/ui/placeholders/placeholders.dart';
+import 'package:app/ui/screens/album_action_sheet.dart';
 import 'package:app/ui/widgets/widgets.dart';
 import 'package:app/values/values.dart';
 import 'package:flutter/cupertino.dart';
@@ -192,7 +193,7 @@ class _AlbumsScreenState extends State<AlbumsScreen> {
   }
 }
 
-class AlbumRow extends StatelessWidget {
+class AlbumRow extends StatefulWidget {
   final Album album;
   final AppRouter router;
   final String sortField;
@@ -205,13 +206,21 @@ class AlbumRow extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<AlbumRow> createState() => _AlbumRowState();
+}
+
+class _AlbumRowState extends State<AlbumRow> {
+  @override
   Widget build(BuildContext context) {
+    final album = widget.album;
+
     return Card(
       child: InkWell(
-        onTap: () => router.gotoAlbumDetailsScreen(
+        onTap: () => widget.router.gotoAlbumDetailsScreen(
           context,
           albumId: album.id,
         ),
+        onLongPress: () => showAlbumActionSheet(context, album: album),
         child: ListTile(
           shape: Border(bottom: Divider.createBorderSide(context)),
           leading: AlbumArtistThumbnail.sm(entity: album, asHero: true),
@@ -221,7 +230,7 @@ class AlbumRow extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white60),
           ),
-          trailing: sortField == 'year' && album.year != null
+          trailing: widget.sortField == 'year' && album.year != null
               ? Transform.translate(
                   offset: const Offset(8, -8),
                   child: Container(

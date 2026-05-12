@@ -17,6 +17,36 @@ class PlayableProvider with ChangeNotifier, StreamSubscriber {
       _vault.clear();
       notifyListeners();
     }));
+
+    subscribe(AlbumProvider.renamedStream.listen(_onAlbumRenamed));
+    subscribe(ArtistProvider.renamedStream.listen(_onArtistRenamed));
+  }
+
+  void _onAlbumRenamed(Album album) {
+    var changed = false;
+    for (final song in _vault.values.whereType<Song>()) {
+      if (song.albumId == album.id && song.albumName != album.name) {
+        song.albumName = album.name;
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
+  }
+
+  void _onArtistRenamed(Artist artist) {
+    var changed = false;
+    for (final song in _vault.values.whereType<Song>()) {
+      if (song.artistId == artist.id && song.artistName != artist.name) {
+        song.artistName = artist.name;
+        changed = true;
+      }
+      if (song.albumArtistId == artist.id &&
+          song.albumArtistName != artist.name) {
+        song.albumArtistName = artist.name;
+        changed = true;
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   List<Playable> syncWithVault(dynamic _playables) {
@@ -134,10 +164,17 @@ class PlayableProvider with ChangeNotifier, StreamSubscriber {
   }) async {
     if (forceRefresh) AppState.delete(['podcast.episodes', podcastId]);
 
-    return _stateAwareFetch(
+    final episodes = await _stateAwareFetch(
       'podcasts/$podcastId/episodes${getUpdates ? '?refresh=1' : ''}',
       ['podcast.episodes', podcastId],
     );
+
+    // A forced refresh repopulates the cache with fresh data — let any
+    // screen rendering the episode list (e.g. PodcastDetailsScreen)
+    // know it should rebuild.
+    if (forceRefresh) notifyListeners();
+
+    return episodes;
   }
 
   Future<List<Playable>> _stateAwareFetch(String url, Object cacheKey) async {

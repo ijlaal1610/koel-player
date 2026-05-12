@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/enums.dart';
 import 'package:app/mixins/stream_subscriber.dart';
 import 'package:app/models/models.dart';
@@ -11,6 +13,9 @@ class ArtistProvider with ChangeNotifier, StreamSubscriber {
   var _page = 1;
   var _sortField = 'name';
   var _sortOrder = SortOrder.asc;
+
+  static final _renamedController = StreamController<Artist>.broadcast();
+  static final renamedStream = _renamedController.stream;
 
   String get sortField => _sortField;
   SortOrder get sortOrder => _sortOrder;
@@ -106,5 +111,36 @@ class ArtistProvider with ChangeNotifier, StreamSubscriber {
     _page = 1;
 
     return paginate();
+  }
+
+  Future<void> toggleFavorite(Artist artist) async {
+    // Optimistic flip + restore on failure.
+    artist.favorite = !artist.favorite;
+    notifyListeners();
+
+    try {
+      await post('favorites/toggle', data: {
+        'type': 'artist',
+        'id': artist.id,
+      });
+    } catch (_) {
+      artist.favorite = !artist.favorite;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> update(Artist artist, {required String name}) async {
+    final response = await put('artists/${artist.id}', data: {
+      'name': name,
+    });
+
+    final renamed = artist.name != response['name'];
+
+    artist.name = response['name'];
+
+    notifyListeners();
+
+    if (renamed) _renamedController.add(artist);
   }
 }

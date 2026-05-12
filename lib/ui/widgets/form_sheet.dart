@@ -2,15 +2,21 @@ import 'package:app/constants/constants.dart';
 import 'package:app/ui/widgets/widgets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A reusable bottom sheet with a title, form fields, and action buttons.
 /// Used for creating/editing playlists, folders, radio stations, etc.
+///
+/// `onSubmit` receives the form sheet's own [BuildContext] — this is the
+/// context callers should use for `Navigator.pop` / `showOverlay` after an
+/// awaited network call. The outer context that opened the sheet may belong
+/// to a route that's already been dismissed by the time `onSubmit` resumes.
 Future<void> showFormSheet(
   BuildContext context, {
   required String title,
   required Widget Function(BuildContext context, StateSetter setState) builder,
   required String submitLabel,
-  required Future<void> Function() onSubmit,
+  required Future<void> Function(BuildContext context) onSubmit,
   bool Function()? canSubmit,
 }) async {
   await showModalBottomSheet(
@@ -38,7 +44,7 @@ class _FormSheet extends StatefulWidget {
   final String title;
   final Widget Function(BuildContext context, StateSetter setState) builder;
   final String submitLabel;
-  final Future<void> Function() onSubmit;
+  final Future<void> Function(BuildContext context) onSubmit;
   final bool Function()? canSubmit;
 
   const _FormSheet({
@@ -125,7 +131,7 @@ class _FormSheetState extends State<_FormSheet> {
                             : () async {
                                 setState(() => _submitting = true);
                                 try {
-                                  await widget.onSubmit();
+                                  await widget.onSubmit(context);
                                 } finally {
                                   if (mounted) {
                                     setState(() => _submitting = false);
@@ -159,6 +165,7 @@ class FormTextField extends StatefulWidget {
   final bool autofocus;
   final int maxLines;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
 
   const FormTextField({
@@ -168,6 +175,7 @@ class FormTextField extends StatefulWidget {
     this.autofocus = false,
     this.maxLines = 1,
     this.keyboardType,
+    this.inputFormatters,
     this.onChanged,
   }) : super(key: key);
 
@@ -204,6 +212,7 @@ class _FormTextFieldState extends State<FormTextField> {
       autofocus: widget.autofocus,
       maxLines: widget.maxLines,
       keyboardType: widget.keyboardType,
+      inputFormatters: widget.inputFormatters,
       onChanged: (value) {
         setState(() {});
         widget.onChanged?.call(value);
@@ -289,6 +298,49 @@ class FormDropdown<T> extends StatelessWidget {
           }).toList(),
           onChanged: onChanged,
         ),
+      ),
+    );
+  }
+}
+
+/// A labeled toggle for use in form sheets, matching the FormTextField style.
+class FormSwitch extends StatelessWidget {
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const FormSwitch({
+    Key? key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: CupertinoColors.tertiarySystemFill,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.only(left: 12, right: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+          ),
+          Transform.scale(
+            scale: 0.8,
+            child: CupertinoSwitch(
+              value: value,
+              activeTrackColor: AppColors.highlight,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
       ),
     );
   }

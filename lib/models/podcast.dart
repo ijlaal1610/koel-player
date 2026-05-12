@@ -1,6 +1,8 @@
 import 'package:app/enums.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:faker/faker.dart';
 import 'package:flutter/widgets.dart';
+import 'package:ulid/ulid.dart';
 
 class Podcast {
   final String id;
@@ -13,6 +15,10 @@ class Podcast {
   final String subscribedAt;
   final String lastPlayedAt;
   final PodcastState state;
+
+  /// Whether the current user has favorited this podcast. Mutable so
+  /// the optimistic favorite toggle can flip it in place.
+  bool favorite;
 
   ImageProvider? _image;
 
@@ -27,11 +33,35 @@ class Podcast {
     required this.subscribedAt,
     required this.lastPlayedAt,
     required this.state,
+    this.favorite = false,
   });
 
   ImageProvider get image {
     this._image ??= CachedNetworkImageProvider(this.imageUrl);
     return this._image!;
+  }
+
+  factory Podcast.fake({
+    String? id,
+    String? title,
+    String? author,
+    bool favorite = false,
+    PodcastState? state,
+  }) {
+    final faker = Faker();
+    return Podcast(
+      id: id ?? Ulid().toString(),
+      title: title ?? faker.lorem.sentence(),
+      url: 'https://example.com/feed.xml',
+      link: 'https://example.com',
+      description: faker.lorem.sentences(2).join(' '),
+      author: author ?? faker.person.name(),
+      imageUrl: faker.image.loremPicsum(width: 192, height: 192),
+      subscribedAt: '2026-01-01T00:00:00Z',
+      lastPlayedAt: '2026-01-01T00:00:00Z',
+      state: state ?? PodcastState(progresses: {}),
+      favorite: favorite,
+    );
   }
 
   factory Podcast.fromJson(Map<String, dynamic> json) {
@@ -46,6 +76,7 @@ class Podcast {
       subscribedAt: json['subscribed_at'],
       lastPlayedAt: json['last_played_at'],
       state: PodcastState.fromJson(json['state']),
+      favorite: json['favorite'] == true,
     );
   }
 

@@ -73,7 +73,8 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
 
               if (allPlaylists.isEmpty) {
                 widgets = [
-                  SliverToBoxAdapter(
+                  SliverFillRemaining(
+                    hasScrollBody: false,
                     child: NoPlaylistsScreen(
                       onTap: () {
                         widget.router.showCreatePlaylistSheet(context);
@@ -181,38 +182,42 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
             child: CupertinoSliverNavigationBar(
               backgroundColor: AppColors.staticScreenHeaderBackground,
               largeTitle: const LargeTitle(text: 'Playlists'),
-              trailing: PopupMenuButton<String>(
-                icon: const Icon(CupertinoIcons.add_circled),
-                offset: const Offset(-12, 48),
-                onSelected: (value) {
-                  if (value == 'playlist') {
-                    widget.router.showCreatePlaylistSheet(context);
-                  } else if (value == 'folder') {
-                    widget.router.showCreatePlaylistFolderSheet(context);
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'playlist',
-                    child: Row(
-                      children: [
-                        Icon(CupertinoIcons.music_note_list, size: 18),
-                        SizedBox(width: 12),
-                        Text('New Playlist'),
+              trailing: Builder(
+                builder: (buttonContext) => IconButton(
+                  icon: const Icon(CupertinoIcons.add_circled),
+                  onPressed: () async {
+                    final box =
+                        buttonContext.findRenderObject() as RenderBox?;
+                    final origin = box == null
+                        ? Offset.zero
+                        : box.localToGlobal(Offset.zero) +
+                            Offset(0, box.size.height);
+
+                    final selected = await showFrostedContextMenu<String>(
+                      context: buttonContext,
+                      position: origin,
+                      items: const [
+                        FrostedMenuItem(
+                          value: 'playlist',
+                          icon: CupertinoIcons.music_note_list,
+                          label: 'New Playlist',
+                        ),
+                        FrostedMenuItem(
+                          value: 'folder',
+                          icon: CupertinoIcons.folder,
+                          label: 'New Folder',
+                        ),
                       ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'folder',
-                    child: Row(
-                      children: [
-                        Icon(CupertinoIcons.folder, size: 18),
-                        SizedBox(width: 12),
-                        Text('New Folder'),
-                      ],
-                    ),
-                  ),
-                ],
+                    );
+                    if (!buttonContext.mounted) return;
+                    if (selected == 'playlist') {
+                      widget.router.showCreatePlaylistSheet(buttonContext);
+                    } else if (selected == 'folder') {
+                      widget.router
+                          .showCreatePlaylistFolderSheet(buttonContext);
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -227,8 +232,15 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
   }) {
     return Card(
       child: Dismissible(
-        direction: DismissDirection.startToEnd,
-        confirmDismiss: (_) async {
+        key: ValueKey(playlist.id),
+        direction: playlist.canDelete
+            ? DismissDirection.horizontal
+            : DismissDirection.startToEnd,
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.endToStart) {
+            return confirmDeletePlaylist(context, playlist: playlist);
+          }
+          // startToEnd: queue songs and bounce back (no actual dismiss).
           final playableProvider = context.read<PlayableProvider>();
           final songs = await playableProvider.fetchForPlaylist(playlist.id);
           if (songs.isNotEmpty) {
@@ -241,6 +253,11 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
           }
           return false;
         },
+        onDismissed: (direction) {
+          if (direction == DismissDirection.endToStart) {
+            deletePlaylistWithFeedback(context, playlist: playlist);
+          }
+        },
         background: Container(
           alignment: AlignmentDirectional.centerStart,
           color: Colors.green,
@@ -249,7 +266,7 @@ class _PlaylistsScreenState extends State<PlaylistsScreen> {
             child: Icon(CupertinoIcons.text_badge_plus),
           ),
         ),
-        key: ValueKey(playlist.id),
+        secondaryBackground: const SwipeDestructiveBackground(),
         child: Padding(
           padding: EdgeInsets.only(left: indented ? 24 : 0),
           child: PlaylistRow(playlist: playlist),
@@ -308,21 +325,39 @@ class NoPlaylistsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height,
-      alignment: Alignment.center,
-      child: Wrap(
-        spacing: 16.0,
-        direction: Axis.vertical,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: <Widget>[
-          const Icon(
-            CupertinoIcons.exclamationmark_square,
-            size: 56.0,
-          ),
-          const Text('You have no playlists in your library.'),
-          ElevatedButton(onPressed: onTap, child: Text('Create Playlist')),
-        ],
+    return Align(
+      // Slightly above visual center to compensate for the mini-player +
+      // tab bar at the bottom, which makes a true Center feel low.
+      alignment: const Alignment(0, -0.4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              CupertinoIcons.music_note_list,
+              size: 56,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No playlists',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Create a playlist to organize your favorite songs.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onTap,
+              icon: const Icon(CupertinoIcons.add, size: 18),
+              label: const Text('Create Playlist'),
+            ),
+          ],
+        ),
       ),
     );
   }
