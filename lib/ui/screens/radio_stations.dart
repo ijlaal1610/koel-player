@@ -1,6 +1,7 @@
 import 'package:app/constants/constants.dart';
 import 'package:app/models/models.dart';
 import 'package:app/providers/providers.dart';
+import 'package:app/ui/screens/radio_station_action_sheet.dart';
 import 'package:app/ui/widgets/widgets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:figma_squircle/figma_squircle.dart';
@@ -70,9 +71,13 @@ class _RadioStationsScreenState extends State<RadioStationsScreen> {
                     else if (stations.isEmpty && !_loading)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Center(
+                        child: Align(
+                          // Slightly above visual center so the
+                          // mini-player + tab bar at the bottom don't
+                          // make the content read as 'sitting low'.
+                          alignment: const Alignment(0, -0.4),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
                                 CupertinoIcons.antenna_radiowaves_left_right,
@@ -101,11 +106,31 @@ class _RadioStationsScreenState extends State<RadioStationsScreen> {
                             if (index >= stations.length) return null;
                             final station = stations[index];
 
-                            return Card(
+                            final card = Card(
                               child: _RadioStationRow(
                                 station: station,
                                 onTap: () => _playStation(station),
                               ),
+                            );
+
+                            if (!station.canDelete) return card;
+
+                            return Dismissible(
+                              key: ValueKey(station.id),
+                              direction: DismissDirection.endToStart,
+                              background: const SizedBox.shrink(),
+                              secondaryBackground:
+                                  const SwipeDestructiveBackground(),
+                              confirmDismiss: (_) => confirmDeleteRadioStation(
+                                context,
+                                station: station,
+                              ),
+                              onDismissed: (_) =>
+                                  deleteRadioStationWithFeedback(
+                                context,
+                                station: station,
+                              ),
+                              child: card,
                             );
                           },
                           childCount: stations.length,
@@ -146,7 +171,7 @@ class _RadioStationsScreenState extends State<RadioStationsScreen> {
 
 }
 
-class _RadioStationRow extends StatelessWidget {
+class _RadioStationRow extends StatefulWidget {
   final RadioStation station;
   final VoidCallback onTap;
 
@@ -157,13 +182,22 @@ class _RadioStationRow extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<_RadioStationRow> createState() => _RadioStationRowState();
+}
+
+class _RadioStationRowState extends State<_RadioStationRow> {
+  @override
   Widget build(BuildContext context) {
+    final station = widget.station;
+
     return Consumer<RadioPlayerProvider>(
       builder: (context, radioPlayer, _) {
         final isPlaying = radioPlayer.currentStation?.id == station.id;
 
         return InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
+          onLongPress: () =>
+              showRadioStationActionSheet(context, station: station),
           child: ListTile(
             shape: Border(bottom: Divider.createBorderSide(context)),
             leading: ClipSmoothRect(

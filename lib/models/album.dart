@@ -15,6 +15,15 @@ class Album {
   int playCount = 0;
   ImageProvider? _image;
 
+  /// Whether the current user is allowed to edit this album.
+  /// Sourced from the koel >= 9.2.0 `permissions.edit` flag on the
+  /// JSON resource. Defaults to `false` when the server didn't include
+  /// permissions (older koel) so the UI hides the action.
+  bool canEdit;
+
+  /// Whether the current user has favorited this album.
+  bool favorite;
+
   Album({
     required this.id,
     required this.name,
@@ -22,6 +31,8 @@ class Album {
     required this.artistId,
     required this.artistName,
     this.year,
+    this.canEdit = false,
+    this.favorite = false,
   });
 
   ImageProvider get image {
@@ -42,6 +53,8 @@ class Album {
   bool get isUnknownAlbum => name == 'Unknown Album';
 
   factory Album.fromJson(Map<String, dynamic> json) {
+    final permissions = json['permissions'];
+
     return Album(
       id: json['id'],
       name: json['name'],
@@ -49,6 +62,8 @@ class Album {
       artistId: json['artist_id'],
       artistName: json['artist_name'],
       year: json['year'] == null ? null : int.parse(json['year'].toString()),
+      canEdit: permissions is Map ? permissions['edit'] == true : false,
+      favorite: json['favorite'] == true,
     );
   }
 
@@ -58,6 +73,8 @@ class Album {
     String? cover,
     int? playCount,
     Artist? artist,
+    bool canEdit = false,
+    bool favorite = false,
   }) {
     Faker faker = Faker();
 
@@ -69,6 +86,8 @@ class Album {
       cover: cover ?? faker.image.loremPicsum(width: 192, height: 192),
       artistId: artist.id,
       artistName: artist.name,
+      canEdit: canEdit,
+      favorite: favorite,
     )..playCount = playCount ?? faker.randomGenerator.integer(1000);
   }
 
@@ -79,7 +98,9 @@ class Album {
       ..cover = remote.cover
       ..name = remote.name
       ..year = remote.year
-      ..playCount = remote.playCount ?? 0;
+      ..playCount = remote.playCount ?? 0
+      ..canEdit = remote.canEdit
+      ..favorite = remote.favorite;
 
     _image = null;
 

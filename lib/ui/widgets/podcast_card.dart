@@ -1,5 +1,6 @@
 import 'package:app/models/models.dart';
 import 'package:app/router.dart';
+import 'package:app/ui/screens/podcast_action_sheet.dart';
 import 'package:app/ui/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 
@@ -31,6 +32,8 @@ class _PodcastCardState extends State<PodcastCard> {
         context,
         podcastId: widget.podcast.id,
       ),
+      onLongPress: () =>
+          showPodcastActionSheet(context, podcast: widget.podcast),
       behavior: HitTestBehavior.opaque,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 100),

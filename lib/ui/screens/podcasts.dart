@@ -6,8 +6,10 @@ import 'package:app/models/models.dart';
 import 'package:app/providers/providers.dart';
 import 'package:app/router.dart';
 import 'package:app/ui/placeholders/placeholders.dart';
+import 'package:app/ui/screens/podcast_action_sheet.dart';
 import 'package:app/ui/widgets/widgets.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -94,9 +96,24 @@ class _PodcastScreenState extends State<PodcastsScreen> {
                       (BuildContext context, int index) {
                         var podcast = podcasts[index];
 
-                        return PodcastRow(
-                          podcast: podcast,
-                          router: widget.router,
+                        return Dismissible(
+                          key: ValueKey(podcast.id),
+                          direction: DismissDirection.endToStart,
+                          background: const SizedBox.shrink(),
+                          secondaryBackground:
+                              const SwipeDestructiveBackground(),
+                          confirmDismiss: (_) => confirmUnsubscribePodcast(
+                            context,
+                            podcast: podcast,
+                          ),
+                          onDismissed: (_) => unsubscribePodcastWithFeedback(
+                            context,
+                            podcast: podcast,
+                          ),
+                          child: PodcastRow(
+                            podcast: podcast,
+                            router: widget.router,
+                          ),
                         );
                       },
                       childCount: podcasts.length,
@@ -146,6 +163,7 @@ class PodcastRow extends StatelessWidget {
           context,
           podcastId: podcast.id,
         ),
+        onLongPress: () => showPodcastActionSheet(context, podcast: podcast),
         child: ListTile(
           shape: Border(bottom: Divider.createBorderSide(context)),
           leading: AlbumArtistThumbnail.sm(entity: podcast, asHero: true),
@@ -166,18 +184,40 @@ class NoPodcastsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Wrap(
-        spacing: 16.0,
-        direction: Axis.vertical,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: <Widget>[
-          Icon(
-            CupertinoIcons.exclamationmark_square,
-            size: 56.0,
-          ),
-          Text('No podcasts available.'),
-        ],
+    return Align(
+      // Slightly above visual center to compensate for the mini-player +
+      // tab bar at the bottom, which makes a true Center feel low.
+      alignment: const Alignment(0, -0.4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              LucideIcons.podcast,
+              size: 56,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No podcasts',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Subscribe to a podcast and it'll show up here.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () =>
+                  const AppRouter().showAddPodcastSheet(context),
+              icon: const Icon(CupertinoIcons.add, size: 18),
+              label: const Text('Add a Podcast'),
+            ),
+          ],
+        ),
       ),
     );
   }

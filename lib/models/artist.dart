@@ -11,7 +11,22 @@ class Artist {
   int playCount = 0;
   ImageProvider? _image;
 
-  Artist({required this.id, required this.name, required this.imageUrl});
+  /// Whether the current user is allowed to edit this artist.
+  /// Sourced from the koel >= 9.2.0 `permissions.edit` flag on the JSON
+  /// resource. Defaults to `false` when the server didn't include
+  /// permissions (older koel) so the UI hides the action.
+  bool canEdit;
+
+  /// Whether the current user has favorited this artist.
+  bool favorite;
+
+  Artist({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    this.canEdit = false,
+    this.favorite = false,
+  });
 
   ImageProvider get image {
     var image = _image;
@@ -33,10 +48,14 @@ class Artist {
   bool get isVariousArtists => name == 'Various Artists';
 
   factory Artist.fromJson(Map<String, dynamic> json) {
+    final permissions = json['permissions'];
+
     return Artist(
       id: json['id'],
       name: json['name'],
       imageUrl: json['image'],
+      canEdit: permissions is Map ? permissions['edit'] == true : false,
+      favorite: json['favorite'] == true,
     );
   }
 
@@ -45,6 +64,8 @@ class Artist {
     String? name,
     String? imageUrl,
     int? playCount,
+    bool canEdit = false,
+    bool favorite = false,
   }) {
     Faker faker = Faker();
 
@@ -52,6 +73,8 @@ class Artist {
       id: id ?? Ulid().toString(),
       name: name ?? faker.person.name(),
       imageUrl: imageUrl ?? faker.image.loremPicsum(width: 192, height: 192),
+      canEdit: canEdit,
+      favorite: favorite,
     )..playCount = playCount ?? faker.randomGenerator.integer(1000);
   }
 
@@ -59,7 +82,9 @@ class Artist {
     this
       ..imageUrl = remote.imageUrl
       ..playCount = remote.playCount ?? 0
-      ..name = remote.name;
+      ..name = remote.name
+      ..canEdit = remote.canEdit
+      ..favorite = remote.favorite;
 
     _image = null;
 

@@ -1,5 +1,6 @@
 import 'package:app/models/models.dart';
 import 'package:app/providers/providers.dart';
+import 'package:app/ui/screens/radio_station_action_sheet.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/cupertino.dart';
@@ -29,6 +30,8 @@ class _RadioStationCardState extends State<RadioStationCard> {
       onTapCancel: () => setState(() => _opacity = 1.0),
       onTap: widget.onTap ??
           () => context.read<RadioPlayerProvider>().play(widget.station),
+      onLongPress: () =>
+          showRadioStationActionSheet(context, station: widget.station),
       behavior: HitTestBehavior.opaque,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 100),
